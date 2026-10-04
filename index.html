@@ -507,7 +507,7 @@ function clearAll(){
 }
 function lockMouse(){if(!isTouch&&cvs.requestPointerLock){try{cvs.requestPointerLock();}catch(_){}}}
 function unlockMouse(){if(document.exitPointerLock){try{document.exitPointerLock();}catch(_){}}}
-document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===cvs;if(!locked)holdAtk=false;});
+let lockAt=0;document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===cvs;lockAt=performance.now();if(!locked)holdAtk=false;});
 function refreshBuild(heal){
   cfg=recalc();
   const diff=cfg.hp-player.max;player.max=cfg.hp;
@@ -833,7 +833,10 @@ function endPtr(e){
 wrap.addEventListener('pointerup',endPtr);wrap.addEventListener('pointercancel',endPtr);
 document.addEventListener('mousemove',e=>{
   if(isTouch||!locked||state!=='play')return;
-  ty-=e.movementX*0.0025;tp-=e.movementY*0.002;tp=clamp(tp,-1.4,1.4);
+  if(performance.now()-lockAt<200)return;
+  const mdx=e.movementX,mdy=e.movementY;
+  if(Math.abs(mdx)>150||Math.abs(mdy)>150)return;
+  ty-=mdx*0.0025;tp-=mdy*0.002;tp=clamp(tp,-1.4,1.4);
 });
 document.addEventListener('mousedown',e=>{
   if(isTouch||state!=='play')return;
@@ -1051,9 +1054,9 @@ function frame(t){
     bobT+=moveAmt*dt*1.9;
     const bobA=player.grounded?Math.min(1,moveAmt/5):0;
     camera.position.set(player.x,player.y+1.6+Math.sin(bobT)*0.05*bobA,player.z);
-    camera.rotation.set(pitch,yaw,lean);
+    camera.rotation.set(pitch,yaw,isTouch?lean:lean*0.25);
     if(shake>0){
-      camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;camera.rotation.z+=(Math.random()-0.5)*shake*0.06;
+      const skf=isTouch?1:0.35;camera.position.x+=(Math.random()-0.5)*shake*0.5*skf;camera.position.y+=(Math.random()-0.5)*shake*0.5*skf;camera.rotation.z+=(Math.random()-0.5)*shake*0.06*skf;
       shake=Math.max(0,shake-dt*1.8);
     }
     const tf=sprinting&&moveAmt>7?80:(dashT>0?86:72);
